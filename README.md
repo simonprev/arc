@@ -76,15 +76,19 @@ There are two supported use-cases of Arc currently:
 
 The upload definition file responds to `Avatar.store/1` which accepts either:
 
-  * A path to a file
+  * A path to a local file
+  * A path to a remote `http` or `https` file
   * A map with a filename and path keys (eg, a `%Plug.Upload{}`)
   * A two-tuple consisting of one of the above file formats as well as a scope object.
 
 Example usage as general file store:
 
 ```elixir
-# Store any accessible file path
+# Store any locally accessible file
 Avatar.store("/path/to/my/file.png") #=> {:ok, "file.png"}
+
+# Store any remotely accessible file
+Avatar.store("http://example.com/image.png") #=> {:ok, "file.png"}
 
 # Store a file directly from a `%Plug.Upload{}`
 Avatar.store(%Plug.Upload{filename: "file.png", path: "/a/b/c"}) #=> {:ok, "file.png"}
@@ -133,21 +137,8 @@ For more information on defining your transformation, please consult [ImageMagic
 Arc currently supports Amazon S3 and local destinations for file uploads.
 
 ### Local Configuration
-```elixir
-defmodule Avatar do
-  use Arc.Definition
 
-  @versions [:original, :thumb]
-
-  def transform(:thumb, _) do
-    {:convert, "-strip -thumbnail 100x100^ -gravity center -extent 100x100 -format png"}
-  end
-
-   def __storage, do: Arc.Storage.Local
-
-   def filename(version,  file), do: "#{version}-#{file.file_name}"
-end
-```
+To store your attachments locally, override the `__storage` function in your definition module to `Arc.Storage.Local`. You may wish to optionally override the storage directory as well, as outlined below.
 
 ### S3 Configuration
 
@@ -164,8 +155,6 @@ config :arc,
 
 ### Storage Directory
 
-Arc requires the specification of a storage directory path (not including the bucket name).
-
 The storage directory defaults to "uploads", but is recommended to configure based on your intended usage.  A common pattern for user profile pictures is to store each user's uploaded images in a separate subdirectory based on their primary key:
 
 ```elixir
@@ -173,6 +162,8 @@ def storage_dir(version, {file, scope}) do
   "uploads/users/avatars/#{scope.id}"
 end
 ```
+
+The storage directory is used for both local filestorage (as the relative or absolute directory), and S3 storage, as the path name (not including the bucket).
 
 ### Access Control Permissions
 

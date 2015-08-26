@@ -43,4 +43,12 @@ defmodule ArcTest.Actions.Store do
       assert DummyDefinition.store({%{filename: "image.png", path: @img}, :scope}) == {:ok, "image.png"}
     end
   end
+
+  test "accepts remote files" do
+    with_mock Arc.Storage.S3, [put: fn(DummyDefinition, _, {%{file_name: "image.png", path: _}, nil}) -> :ok end] do
+      with_mock :httpc, [request: fn(:get, {'http://example.com/image.png', []}, [], []) -> {:ok, {{'HTTP/1.1', nil, nil}, nil, File.read!(@img)}} end] do
+        assert DummyDefinition.store("http://example.com/image.png") == {:ok, "image.png"}
+      end
+    end
+  end
 end
